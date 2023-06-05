@@ -1,84 +1,104 @@
 import 'package:flutter/material.dart';
-import 'package:coindash_pro/coin_data.dart';
 import 'package:flutter/cupertino.dart';
+import 'coin_data.dart';
 import 'dart:io' show Platform;
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 
 class PriceScreen extends StatefulWidget {
-  const PriceScreen({super.key});
-
   @override
-  PriceScreenState createState() => PriceScreenState();
+  _PriceScreenState createState() => _PriceScreenState();
 }
 
-class PriceScreenState extends State<PriceScreen> {
-  String selectedCurrency = 'USD';
-  @override
-  void initState() {
-    super.initState();
-  }
+class _PriceScreenState extends State<PriceScreen> {
+  String selectedCurrency = 'AUD';
 
-  DropdownButton<String> androidDropDown() {
+  DropdownButton<String> androidDropdown() {
     List<DropdownMenuItem<String>> dropdownItems = [];
     for (String currency in currenciesList) {
       var newItem = DropdownMenuItem(
-        value: currency,
         child: Text(currency),
+        value: currency,
       );
       dropdownItems.add(newItem);
     }
 
-    return DropdownButton(
+    return DropdownButton<String>(
       value: selectedCurrency,
       items: dropdownItems,
       onChanged: (value) {
-        setState(
-          () {
-            selectedCurrency = value.toString();
-          },
-        );
+        setState(() {
+          selectedCurrency = value.toString();
+          getData();
+        });
       },
     );
   }
 
-  CupertinoPicker iosPicker() {
+  CupertinoPicker iOSPicker() {
     List<Text> pickerItems = [];
     for (String currency in currenciesList) {
-      pickerItems.add(
-        Text(currency),
-      );
+      pickerItems.add(Text(currency));
     }
+
     return CupertinoPicker(
       backgroundColor: Colors.lightBlue,
       itemExtent: 32.0,
       onSelectedItemChanged: (selectedIndex) {
-        print(selectedIndex);
+        setState(() {
+          selectedCurrency = currenciesList[selectedIndex];
+          getData();
+        });
       },
       children: pickerItems,
     );
   }
 
-  final apikey = '49D57AD1-C9EC-400E-9440-2C45C0C4C2E3';
-  int currencyRate = 0;
-  Future<dynamic> getBTCPrice() async {
-    final url = Uri.parse(
-        'https://rest.coinapi.io/v1/exchangerate/BTC/$selectedCurrency?apikey=$apikey');
-    final response = await http.get(url);
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      currencyRate = data['rate'].round();
-      // return (currencyRate['rate']);
-      // Process the data as needed
-    } else {
-      print('Request failed with status: ${response.statusCode}');
+  //value had to be updated into a Map to store the values of all three cryptocurrencies.
+  Map<String, String> coinValues = {};
+  //7: Figure out a way of displaying a '?' on screen while we're waiting for the price data to come back. First we have to create a variable to keep track of when we're waiting on the request to complete.
+  bool isWaiting = false;
+
+  void getData() async {
+    //7: Second, we set it to true when we initiate the request for prices.
+    isWaiting = true;
+    try {
+      //6: Update this method to receive a Map containing the crypto:price key value pairs.
+      var data = await CoinData().getCoinData(selectedCurrency);
+      //7. Third, as soon the above line of code completes, we now have the data and no longer need to wait. So we can set isWaiting to false.
+      isWaiting = false;
+      setState(() {
+        coinValues = data;
+      });
+    } catch (e) {
+      print(e);
     }
   }
 
   @override
-  Widget build(BuildContext context) {
-    getBTCPrice();
+  void initState() {
+    super.initState();
+    getData();
+  }
 
+  ////For bonus points, create a method that loops through the cryptoList and generates a CryptoCard for each. Call makeCards() in the build() method instead of the Column with 3 CryptoCards.
+//  Column makeCards() {
+//    List<CryptoCard> cryptoCards = [];
+//    for (String crypto in cryptoList) {
+//      cryptoCards.add(
+//        CryptoCard(
+//          cryptoCurrency: crypto,
+//          selectedCurrency: selectedCurrency,
+//          value: isWaiting ? '?' : coinValues[crypto],
+//        ),
+//      );
+//    }
+//    return Column(
+//      crossAxisAlignment: CrossAxisAlignment.stretch,
+//      children: cryptoCards,
+//    );
+//  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('🤑 Coin Ticker'),
@@ -87,36 +107,78 @@ class PriceScreenState extends State<PriceScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18.0, 18.0, 18.0, 0),
-            child: Card(
-              color: Colors.lightBlueAccent,
-              elevation: 5.0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.0),
+          //3: You'll need to use a Column Widget to contain the three CryptoCards.
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              CryptoCard(
+                cryptoCurrency: 'BTC',
+                //7. Finally, we use a ternary operator to check if we are waiting and if so, we'll display a '?' otherwise we'll show the actual price data.
+                value: isWaiting ? '?' : coinValues['rate'],
+                selectedCurrency: selectedCurrency,
               ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                    vertical: 15.0, horizontal: 28.0),
-                child: Text(
-                  '1 BTC = $currencyRate $selectedCurrency',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 20.0,
-                    color: Colors.white,
-                  ),
-                ),
+              CryptoCard(
+                cryptoCurrency: 'ETH',
+                value: isWaiting ? '?' : coinValues['rate'],
+                selectedCurrency: selectedCurrency,
               ),
-            ),
+              CryptoCard(
+                cryptoCurrency: 'LTC',
+                value: isWaiting ? '?' : coinValues['rate'],
+                selectedCurrency: selectedCurrency,
+              ),
+            ],
           ),
+
           Container(
             height: 150.0,
             alignment: Alignment.center,
             padding: const EdgeInsets.only(bottom: 30.0),
             color: Colors.lightBlue,
-            child: Platform.isAndroid ? androidDropDown() : iosPicker(),
+            child: Platform.isIOS ? iOSPicker() : androidDropdown(),
           ),
         ],
+      ),
+    );
+  }
+}
+
+//1: Refactor this Padding Widget into a separate Stateless Widget called CryptoCard, so we can create 3 of them, one for each cryptocurrency.
+// ignore: must_be_immutable
+class CryptoCard extends StatelessWidget {
+  //2: You'll need to able to pass the selectedCurrency, value and cryptoCurrency to the constructor of this CryptoCard Widget.
+  CryptoCard({
+    super.key,
+    required this.value,
+    required this.selectedCurrency,
+    required this.cryptoCurrency,
+  });
+
+  var value;
+  final String selectedCurrency;
+  final String cryptoCurrency;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18.0, 18.0, 18.0, 0),
+      child: Card(
+        color: Colors.lightBlueAccent,
+        elevation: 5.0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.0),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 15.0, horizontal: 28.0),
+          child: Text(
+            '1 $cryptoCurrency = $value $selectedCurrency',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 20.0,
+              color: Colors.white,
+            ),
+          ),
+        ),
       ),
     );
   }
