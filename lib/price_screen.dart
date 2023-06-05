@@ -61,7 +61,7 @@ class PriceScreenState extends State<PriceScreen> {
 
   final apikey = '49D57AD1-C9EC-400E-9440-2C45C0C4C2E3';
   int currencyRate = 0;
-  Future<dynamic> getCoinData() async {
+  Future<dynamic> getBTCPrice() async {
     final url = Uri.parse(
         'https://rest.coinapi.io/v1/exchangerate/BTC/$selectedCurrency?apikey=$apikey');
     final response = await http.get(url);
@@ -77,7 +77,7 @@ class PriceScreenState extends State<PriceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    getCoinData();
+    getBTCPrice();
 
     return Scaffold(
       appBar: AppBar(
@@ -99,7 +99,7 @@ class PriceScreenState extends State<PriceScreen> {
                 padding: const EdgeInsets.symmetric(
                     vertical: 15.0, horizontal: 28.0),
                 child: Text(
-                  '1 BTC = ${currencyRate} $selectedCurrency',
+                  '1 BTC = $currencyRate $selectedCurrency',
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 20.0,
