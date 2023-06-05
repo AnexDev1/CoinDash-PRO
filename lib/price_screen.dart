@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:coindash_pro/coin_data.dart';
 import 'package:flutter/cupertino.dart';
 import 'dart:io' show Platform;
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class PriceScreen extends StatefulWidget {
   const PriceScreen({super.key});
@@ -12,6 +14,10 @@ class PriceScreen extends StatefulWidget {
 
 class PriceScreenState extends State<PriceScreen> {
   String selectedCurrency = 'USD';
+  @override
+  void initState() {
+    super.initState();
+  }
 
   DropdownButton<String> androidDropDown() {
     List<DropdownMenuItem<String>> dropdownItems = [];
@@ -53,8 +59,26 @@ class PriceScreenState extends State<PriceScreen> {
     );
   }
 
+  final apikey = '49D57AD1-C9EC-400E-9440-2C45C0C4C2E3';
+  int currencyRate = 0;
+  Future<dynamic> getCoinData() async {
+    final url = Uri.parse(
+        'https://rest.coinapi.io/v1/exchangerate/BTC/$selectedCurrency?apikey=$apikey');
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      currencyRate = data['rate'].round();
+      // return (currencyRate['rate']);
+      // Process the data as needed
+    } else {
+      print('Request failed with status: ${response.statusCode}');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    getCoinData();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('🤑 Coin Ticker'),
@@ -75,7 +99,7 @@ class PriceScreenState extends State<PriceScreen> {
                 padding: const EdgeInsets.symmetric(
                     vertical: 15.0, horizontal: 28.0),
                 child: Text(
-                  '1 BTC = ? $selectedCurrency',
+                  '1 BTC = ${currencyRate} $selectedCurrency',
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     fontSize: 20.0,
